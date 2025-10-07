@@ -1,28 +1,46 @@
 <?php
 include("../conexao.php");
+
 $type = $_GET['tipo'] ?? 'diario'; // diario, mensal, anual
 $maquina_id = $_GET['maquina_id'] ?? 0;
+$periodo = $_GET['periodo'] ?? 30; // número de dias/meses/anos
 
+// Garantir que seja inteiro
+$periodo = intval($periodo);
+if($periodo < 1) $periodo = 30;
+
+$where = $maquina_id > 0 ? "AND maquina_id=$maquina_id" : "";
+
+// SQL dinâmico dependendo do tipo
 switch($type){
     case 'diario':
-        $table = 'consolidado_diario';
-        $date_col = 'data';
+        // Pega os últimos $periodo dias
+        $sql = "SELECT data, percentual_atividade
+                FROM consolidado_diario
+                WHERE data >= CURDATE() - INTERVAL $periodo DAY $where
+                ORDER BY data ASC";
         break;
+
     case 'mensal':
-        $table = 'consolidado_mensal';
-        $date_col = 'CONCAT(ano,"-",mes,"-01")';
+        // Pega os últimos $periodo meses
+        $sql = "SELECT CONCAT(ano,'-',LPAD(mes,2,'0'),'-01') as data, percentual_atividade
+                FROM consolidado_mensal
+                WHERE DATE(CONCAT(ano,'-',LPAD(mes,2,'0'),'-01')) >= DATE_SUB(CURDATE(), INTERVAL $periodo MONTH) $where
+                ORDER BY ano, mes ASC";
         break;
+
     case 'anual':
-        $table = 'consolidado_anual';
-        $date_col = 'CONCAT(ano,"-01-01")';
+        // Pega os últimos $periodo anos
+        $sql = "SELECT CONCAT(ano,'-01-01') as data, percentual_atividade
+                FROM consolidado_anual
+                WHERE ano >= YEAR(CURDATE()) - ($periodo - 1) $where
+                ORDER BY ano ASC";
         break;
+
     default:
         die(json_encode([]));
 }
 
-$where = $maquina_id > 0 ? "WHERE maquina_id=$maquina_id" : "";
-
-$sql = "SELECT $date_col as data, percentual_atividade FROM $table $where ORDER BY $date_col ASC";
 $result = $conn->query($sql);
 
 $data = [];
