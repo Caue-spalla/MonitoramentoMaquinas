@@ -25,14 +25,20 @@ $conn->close();
 <body class="container mt-4">
     <h2 class="mb-4">Dashboard de Monitoramento de Máquinas</h2>
 
-    <div class="mb-3">
-        <label for="maquinaSelect" class="form-label">Selecione a máquina:</label>
-        <select id="maquinaSelect" class="form-select">
-            <option value="0">Todas</option>
-            <?php foreach($maquinas as $m): ?>
-                <option value="<?= $m['id'] ?>"><?= $m['nome'] ?></option>
-            <?php endforeach; ?>
-        </select>
+    <div class="row mb-3">
+        <div class="col-md-6">
+            <label for="maquinaSelect" class="form-label">Selecione a máquina:</label>
+            <select id="maquinaSelect" class="form-select">
+                <option value="0">Todas</option>
+                <?php foreach($maquinas as $m): ?>
+                    <option value="<?= $m['id'] ?>"><?= $m['nome'] ?></option>
+                <?php endforeach; ?>
+            </select>
+        </div>
+        <div class="col-md-6">
+            <label for="periodoInput" class="form-label">Período (dias/meses/anos):</label>
+            <input type="number" id="periodoInput" class="form-control" value="30" min="1">
+        </div>
     </div>
 
     <ul class="nav nav-tabs" id="viewTab" role="tablist">
@@ -83,8 +89,8 @@ $conn->close();
 <script>
 const corBase = '#2496BF';
 
-function fetchChartData(tipo, maquina_id, chart) {
-    fetch(`api/consolidado.php?tipo=${tipo}&maquina_id=${maquina_id}`)
+function fetchChartData(tipo, maquina_id, periodo, chart) {
+    fetch(`api/consolidado.php?tipo=${tipo}&maquina_id=${maquina_id}&periodo=${periodo}`)
         .then(res => res.json())
         .then(data => {
             const labels = data.map(d => d.data);
@@ -112,12 +118,15 @@ const chartAnual = new Chart(document.getElementById('chartAnual'), configAnual)
 
 function atualizarGraficos() {
     const maquina_id = document.getElementById('maquinaSelect').value;
-    fetchChartData('diario', maquina_id, chartDiario);
-    fetchChartData('mensal', maquina_id, chartMensal);
-    fetchChartData('anual', maquina_id, chartAnual);
+    const periodo = document.getElementById('periodoInput').value;
+    fetchChartData('diario', maquina_id, periodo, chartDiario);
+    fetchChartData('mensal', maquina_id, periodo, chartMensal);
+    fetchChartData('anual', maquina_id, periodo, chartAnual);
 }
 
 document.getElementById('maquinaSelect').addEventListener('change', atualizarGraficos);
+document.getElementById('periodoInput').addEventListener('change', atualizarGraficos);
+
 atualizarGraficos();
 </script>
 </body>
