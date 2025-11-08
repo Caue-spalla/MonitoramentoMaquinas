@@ -1,45 +1,41 @@
 <?php
+header('Content-Type: application/json');
+header('Access-Control-Allow-Origin: *'); // Permite requisições externas
+header('Access-Control-Allow-Methods: POST');
+header('Access-Control-Allow-Headers: Content-Type');
 
-// Permite requisições do ESP32
-header("Access-Control-Allow-Origin: *");
-header("Content-Type: application/json; charset=UTF-8");
+include 'conexao.php'; // garante que $conn existe
 
-// Confirma que o método é POST
-if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    http_response_code(405);
-    echo json_encode(["erro" => "Método não permitido. Use POST."]);
+// Lê o corpo JSON
+$data = json_decode(file_get_contents('php://input'), true);
+
+// Verifica se os campos obrigatórios existem
+if (!isset($data['maquina_id']) || !isset($data['vibrando'])) {
+    echo json_encode([
+        'status' => 'erro',
+        'mensagem' => 'Campos obrigatórios ausentes: maquina_id e vibrando.'
+    ]);
     exit;
 }
 
-// Conecta ao banco
-include_once "conexao.php";
+$maquina_id = intval($data['maquina_id']);
+$vibrando = intval($data['vibrando']);
 
-// Lê o corpo bruto da requisição (JSON enviado pelo ESP)
-$input = file_get_contents("php://input");
-$data = json_decode($input, true);
-
-// Valida o JSON
-if (!$data || !isset($data["ax"]) || !isset($data["ay"]) || !isset($data["az"])) {
-    http_response_code(400);
-    echo json_encode(["erro" => "JSON inválido ou campos ausentes."]);
-    exit;
-}
-
-// Extrai e sanitiza os dados
-$ax = floatval($data["ax"]);
-$ay = floatval($data["ay"]);
-$az = floatval($data["az"]);
-
-// Prepara a query (uso seguro de prepared statement)
-$stmt = $conn->prepare("INSERT INTO dados (ax, ay, az, data_hora) VALUES (?, ?, ?, NOW())");
-$stmt->bind_param("ddd", $ax, $ay, $az);
+// Prepara e executa o insert
+$sql = "INSERT INTO leituras (maquina_id, vibrando, timestamp) VALUES (?, ?, NOW())";
+$stmt = $conn->prepare($sql);
+$stmt->bind_param("ii", $maquina_id, $vibrando);
 
 if ($stmt->execute()) {
-    http_response_code(200);
-    echo json_encode(["status" => "ok", "mensagem" => "Dados salvos com sucesso!"]);
+    echo json_encode([
+        'status' => 'sucesso',
+        'mensagem' => 'Leitura registrada com sucesso.'
+    ]);
 } else {
-    http_response_code(500);
-    echo json_encode(["erro" => "Falha ao inserir dados no banco."]);
+    echo json_encode([
+        'status' => 'erro',
+        'mensagem' => 'Falha ao inserir leitura: ' . $stmt->error
+    ]);
 }
 
 $stmt->close();
