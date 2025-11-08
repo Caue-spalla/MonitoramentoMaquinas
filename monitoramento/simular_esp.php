@@ -2,11 +2,10 @@
 
 $url = "http://localhost/monitoramento/salvar.php";
 
-// Dados simulados (m/s²)
+// Dados simulados
 $dados = [
-    "ax" => 1.23,
-    "ay" => 0.45,
-    "az" => 9.80
+    "maquina_id" => 1,   // ID da máquina cadastrada no banco
+    "vibrando" => rand(0, 1) // 0 = parado, 1 = vibrando
 ];
 
 $options = [
