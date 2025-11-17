@@ -10,7 +10,7 @@ CREATE TABLE leituras (
     id INT AUTO_INCREMENT PRIMARY KEY,
     maquina_id INT NOT NULL,
     vibrando TINYINT(1) NOT NULL,
-    timestamp DATETIME NOT NULL,
+    data_hora DATETIME NOT NULL,
     FOREIGN KEY (maquina_id) REFERENCES maquinas(id)
 );
 
@@ -19,7 +19,7 @@ CREATE TABLE consolidado_diario (
     maquina_id INT NOT NULL,
     data DATE NOT NULL,
     percentual_atividade FLOAT NOT NULL,
-    UNIQUE(maquina_id, data),
+    UNIQUE KEY unq_diario (maquina_id, data),
     FOREIGN KEY (maquina_id) REFERENCES maquinas(id)
 );
 
@@ -29,7 +29,7 @@ CREATE TABLE consolidado_mensal (
     ano INT NOT NULL,
     mes INT NOT NULL,
     percentual_atividade FLOAT NOT NULL,
-    UNIQUE(maquina_id, ano, mes),
+    UNIQUE KEY unq_mensal (maquina_id, ano, mes),
     FOREIGN KEY (maquina_id) REFERENCES maquinas(id)
 );
 
@@ -38,6 +38,6 @@ CREATE TABLE consolidado_anual (
     maquina_id INT NOT NULL,
     ano INT NOT NULL,
     percentual_atividade FLOAT NOT NULL,
-    UNIQUE(maquina_id, ano),
+    UNIQUE KEY unq_anual (maquina_id, ano),
     FOREIGN KEY (maquina_id) REFERENCES maquinas(id)
 );

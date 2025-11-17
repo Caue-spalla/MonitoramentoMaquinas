@@ -1,43 +1,45 @@
 <?php
-header('Content-Type: application/json');
-header('Access-Control-Allow-Origin: *'); // Permite requisições externas
-header('Access-Control-Allow-Methods: POST');
-header('Access-Control-Allow-Headers: Content-Type');
+include("conexao.php");
+date_default_timezone_set('America/Sao_Paulo');
 
-include 'conexao.php'; // garante que $conn existe
-
-// Lê o corpo JSON
-$data = json_decode(file_get_contents('php://input'), true);
-
-// Verifica se os campos obrigatórios existem
-if (!isset($data['maquina_id']) || !isset($data['vibrando'])) {
+// Só permite POST
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    http_response_code(405); // Método não permitido
     echo json_encode([
-        'status' => 'erro',
-        'mensagem' => 'Campos obrigatórios ausentes: maquina_id e vibrando.'
+        'status' => 'error',
+        'message' => 'Use POST com JSON.'
     ]);
     exit;
 }
 
-$maquina_id = intval($data['maquina_id']);
-$vibrando = intval($data['vibrando']);
+// Lê JSON do ESP
+$data = json_decode(file_get_contents('php://input'), true);
 
-// Prepara e executa o insert
-$sql = "INSERT INTO leituras (maquina_id, vibrando, timestamp) VALUES (?, ?, NOW())";
-$stmt = $conn->prepare($sql);
-$stmt->bind_param("ii", $maquina_id, $vibrando);
+$maquina_id = $data['maquina_id'] ?? null;
+$vibrando   = $data['vibrando'] ?? null;
 
-if ($stmt->execute()) {
+// Valida campos obrigatórios
+if (!$maquina_id || $vibrando === null) {
     echo json_encode([
-        'status' => 'sucesso',
-        'mensagem' => 'Leitura registrada com sucesso.'
+        'status' => 'error',
+        'message' => 'Campos obrigatórios: maquina_id, vibrando.'
     ]);
-} else {
-    echo json_encode([
-        'status' => 'erro',
-        'mensagem' => 'Falha ao inserir leitura: ' . $stmt->error
-    ]);
+    exit;
 }
 
-$stmt->close();
+// Insere no banco
+$sql = "INSERT INTO leituras (maquina_id, vibrando, data_hora)
+        VALUES (?, ?, NOW())";
+
+$stmt = $conn->prepare($sql);
+$stmt->bind_param("ii", $maquina_id, $vibrando);
+$stmt->execute();
+
+echo json_encode([
+    'status' => 'ok',
+    'maquina_id' => $maquina_id,
+    'vibrando' => $vibrando
+]);
+
 $conn->close();
 ?>

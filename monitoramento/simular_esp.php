@@ -1,27 +1,17 @@
 <?php
+include("conexao.php");
+date_default_timezone_set('America/Sao_Paulo');
 
-$url = "http://localhost/monitoramento/salvar.php";
+// IDs das máquinas existentes
+$maquinas = [1,2]; 
 
-// Dados simulados
-$dados = [
-    "maquina_id" => 1,   // ID da máquina cadastrada no banco
-    "vibrando" => rand(0, 1) // 0 = parado, 1 = vibrando
-];
-
-$options = [
-    "http" => [
-        "header"  => "Content-Type: application/json\r\n",
-        "method"  => "POST",
-        "content" => json_encode($dados)
-    ]
-];
-
-$context  = stream_context_create($options);
-$result = file_get_contents($url, false, $context);
-
-if ($result === FALSE) {
-    echo "Erro ao enviar requisição.\n";
-} else {
-    echo "Resposta do servidor: $result\n";
+foreach($maquinas as $m){
+    $vibrando = rand(0,1); // aleatório
+    $sql = "INSERT INTO leituras (maquina_id, vibrando, timestamp) 
+            VALUES ($m, $vibrando, NOW())";
+    $conn->query($sql);
+    echo "Máquina $m: ".($vibrando ? "vibrando" : "parada")." inserida\\n";
 }
+
+$conn->close();
 ?>
