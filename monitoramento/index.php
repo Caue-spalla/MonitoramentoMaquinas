@@ -14,17 +14,27 @@ $conn->close();
 <head>
     <meta charset="UTF-8">
     <title>Dashboard de Monitoramento</title>
+
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- Flatpickr -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/pt.js"></script>
+
     <style>
         body { background-color: #f8f9fa; }
         .card { margin-bottom: 20px; }
         .chart-container { position: relative; height:400px; }
     </style>
 </head>
+
 <body class="container mt-4">
+
     <h2 class="mb-4">Dashboard de Monitoramento de Máquinas</h2>
 
+    <!-- Filtros -->
     <div class="row mb-3">
         <div class="col-md-6">
             <label for="maquinaSelect" class="form-label">Selecione a máquina:</label>
@@ -35,12 +45,14 @@ $conn->close();
                 <?php endforeach; ?>
             </select>
         </div>
+
         <div class="col-md-6">
-            <label for="periodoInput" class="form-label">Período (dias/meses/anos):</label>
-            <input type="number" id="periodoInput" class="form-control" value="30" min="1">
+            <label for="rangeData" class="form-label">Período:</label>
+            <input id="rangeData" class="form-control" placeholder="Selecione o intervalo de datas">
         </div>
     </div>
 
+    <!-- Abas -->
     <ul class="nav nav-tabs" id="viewTab" role="tablist">
         <li class="nav-item" role="presentation">
             <button class="nav-link active" id="diario-tab" data-bs-toggle="tab" data-bs-target="#diario" type="button">Diário</button>
@@ -52,7 +64,9 @@ $conn->close();
             <button class="nav-link" id="anual-tab" data-bs-toggle="tab" data-bs-target="#anual" type="button">Anual</button>
         </li>
     </ul>
+
     <div class="tab-content mt-3">
+
         <div class="tab-pane fade show active" id="diario">
             <div class="card">
                 <div class="card-body">
@@ -63,6 +77,7 @@ $conn->close();
                 </div>
             </div>
         </div>
+
         <div class="tab-pane fade" id="mensal">
             <div class="card">
                 <div class="card-body">
@@ -73,6 +88,7 @@ $conn->close();
                 </div>
             </div>
         </div>
+
         <div class="tab-pane fade" id="anual">
             <div class="card">
                 <div class="card-body">
@@ -83,14 +99,36 @@ $conn->close();
                 </div>
             </div>
         </div>
+
     </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
 <script>
 const corBase = '#2496BF';
 
-function fetchChartData(tipo, maquina_id, periodo, chart) {
-    fetch(`api/consolidado.php?tipo=${tipo}&maquina_id=${maquina_id}&periodo=${periodo}`)
+let dataInicio = null;
+let dataFim = null;
+
+// Inicializa calendário de intervalo
+flatpickr("#rangeData", {
+    mode: "range",
+    locale: "pt",
+    dateFormat: "Y-m-d",
+    onChange: function(selectedDates) {
+        if (selectedDates.length === 2) {
+            dataInicio = selectedDates[0].toISOString().split('T')[0];
+            dataFim = selectedDates[1].toISOString().split('T')[0];
+            atualizarGraficos();
+        }
+    }
+});
+
+// Função de busca
+function fetchChartData(tipo, maquina_id, chart) {
+    if (!dataInicio || !dataFim) return;
+
+    fetch(`api/consolidado.php?tipo=${tipo}&maquina_id=${maquina_id}&inicio=${dataInicio}&fim=${dataFim}`)
         .then(res => res.json())
         .then(data => {
             const labels = data.map(d => d.data);
@@ -102,32 +140,36 @@ function fetchChartData(tipo, maquina_id, periodo, chart) {
         });
 }
 
-// Configuração dos gráficos
-const configDiario = {
+// Configuração base dos gráficos
+const baseConfig = {
     type: 'line',
-    data: { labels: [], datasets: [{ label: 'Percentual de atividade', data: [], borderColor: corBase, backgroundColor: corBase+'33', tension: 0.3 }] },
+    data: { labels: [], datasets: [{
+        label: 'Percentual de atividade',
+        data: [],
+        borderColor: corBase,
+        backgroundColor: corBase + '33',
+        tension: 0.3
+    }]},
     options: { responsive:true, scales:{ y:{ beginAtZero:true, max:100 } } }
 };
 
-const configMensal = JSON.parse(JSON.stringify(configDiario));
-const configAnual = JSON.parse(JSON.stringify(configDiario));
-
-const chartDiario = new Chart(document.getElementById('chartDiario'), configDiario);
-const chartMensal = new Chart(document.getElementById('chartMensal'), configMensal);
-const chartAnual = new Chart(document.getElementById('chartAnual'), configAnual);
+const chartDiario = new Chart(document.getElementById('chartDiario'), JSON.parse(JSON.stringify(baseConfig)));
+const chartMensal = new Chart(document.getElementById('chartMensal'), JSON.parse(JSON.stringify(baseConfig)));
+const chartAnual = new Chart(document.getElementById('chartAnual'), JSON.parse(JSON.stringify(baseConfig)));
 
 function atualizarGraficos() {
     const maquina_id = document.getElementById('maquinaSelect').value;
-    const periodo = document.getElementById('periodoInput').value;
-    fetchChartData('diario', maquina_id, periodo, chartDiario);
-    fetchChartData('mensal', maquina_id, periodo, chartMensal);
-    fetchChartData('anual', maquina_id, periodo, chartAnual);
+
+    if (!dataInicio || !dataFim) return;
+
+    fetchChartData('diario', maquina_id, chartDiario);
+    fetchChartData('mensal', maquina_id, chartMensal);
+    fetchChartData('anual', maquina_id, chartAnual);
 }
 
 document.getElementById('maquinaSelect').addEventListener('change', atualizarGraficos);
-document.getElementById('periodoInput').addEventListener('change', atualizarGraficos);
 
-atualizarGraficos();
 </script>
+
 </body>
 </html>
