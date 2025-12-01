@@ -71,7 +71,7 @@ if (isset($_POST["iniciar"])) {
 
     <?php
 
-    // Função para imprimir e flushar
+    // Funções para enviar log, atualizar status e barra
     function enviar($msg) {
         echo "<script>
                 document.getElementById('log').innerHTML += '$msg<br>';
@@ -109,7 +109,9 @@ if (isset($_POST["iniciar"])) {
         for ($i = 0; $i < 300; $i++) {
 
             $id = rand(1,3);
-            $vib = rand(0,1);
+
+            // Mais chance de vibrando: 70% vibrando, 30% parado
+            $vib = rand(1,10) <= 7 ? 1 : 0;
 
             $h = rand(0,23);
             $m = rand(0,59);
@@ -138,7 +140,7 @@ if (isset($_POST["iniciar"])) {
 ?>
 
 <!-- ================================
-     FORMULÁRIO PRINCIPAL (TEMA CLARO)
+     FORMULÁRIO PRINCIPAL
 ================================= -->
 
 <!DOCTYPE html>

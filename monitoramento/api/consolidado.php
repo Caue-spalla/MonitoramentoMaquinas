@@ -1,14 +1,27 @@
 <?php
 header('Content-Type: application/json; charset=utf-8');
+
+ini_set('session.cookie_lifetime', 0); 
+ini_set('session.gc_maxlifetime', 3600);
+session_start();
+
+if (!isset($_SESSION['logado']) || $_SESSION['logado'] !== true) {
+    http_response_code(401); 
+    
+    echo json_encode([
+        "error" => "Login required", 
+        "message" => "Sua sessão expirou ou o acesso não foi autorizado."
+    ], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
 include("../conexao.php");
 
-// Parâmetros
 $tipo = $_GET['tipo'] ?? 'diario';
 $maquina_id = intval($_GET['maquina_id'] ?? 0);
 $data_inicio = $_GET['inicio'] ?? null;
 $data_fim = $_GET['fim'] ?? null;
 
-// Valida as datas
 if (!$data_inicio || !$data_fim) {
     echo json_encode([]);
     exit;
@@ -18,9 +31,6 @@ $saida = [];
 
 switch ($tipo) {
 
-    // ------------------------------------------------------
-    // 🔹 CONSOLIDADO DIÁRIO
-    // ------------------------------------------------------
     case 'diario':
         $sql = "
             SELECT 
@@ -47,12 +57,7 @@ switch ($tipo) {
         break;
 
 
-    // ------------------------------------------------------
-    // 🔹 CONSOLIDADO MENSAL
-    // ------------------------------------------------------
     case 'mensal':
-        // Ano-mês início e fim
-        // (Ex: 2025-01)
         $ano_inicio = intval(substr($data_inicio, 0, 4));
         $mes_inicio = intval(substr($data_inicio, 5, 2));
 
@@ -86,9 +91,6 @@ switch ($tipo) {
         break;
 
 
-    // ------------------------------------------------------
-    // 🔹 CONSOLIDADO ANUAL
-    // ------------------------------------------------------
     case 'anual':
         $ano_inicio = intval(substr($data_inicio, 0, 4));
         $ano_fim = intval(substr($data_fim, 0, 4));
@@ -118,6 +120,5 @@ switch ($tipo) {
         break;
 }
 
-// Saída final
 echo json_encode($saida, JSON_UNESCAPED_UNICODE);
 $conn->close();
