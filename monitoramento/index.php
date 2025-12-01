@@ -30,8 +30,13 @@ $conn->close();
     <title>Dashboard de Monitoramento</title>
 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
+    
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@2.2.1/dist/chartjs-plugin-annotation.min.js"></script>
+
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/momentjs/latest/moment.min.js"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css">
@@ -141,7 +146,7 @@ $(function () {
     atualizarGraficos();
 });
 
-// Criação de gráfico com limite de zoom mínimo de 3 pontos
+// Criação de gráfico com Plugins (Zoom e Annotation)
 function novoGrafico(ctx) {
     return new Chart(ctx, {
         type: 'line',
@@ -160,7 +165,20 @@ function novoGrafico(ctx) {
                 zoom: {
                     pan: { enabled: true, mode: 'x' },
                     zoom: { wheel: { enabled: true }, pinch: { enabled: true }, mode: 'x' },
-                    limits: { x: { minRange: 3 } } // <-- mínimo 3 pontos visíveis
+                    limits: { x: { minRange: 3 } }
+                },
+                // --- CONFIGURAÇÃO DA LINHA HORIZONTAL (ANNOTATION) ---
+                annotation: {
+                    annotations: {
+                        linhaLimite: {
+                            type: 'line',
+                            yMin: minPercent, // Começa no valor do input
+                            yMax: minPercent, // Termina no valor do input
+                            borderColor: corAlerta + '50',
+                            borderWidth: 2,
+                            borderDash: [10, 5], // Linha tracejada
+                        }
+                    }
                 }
             },
             scales: { y: { beginAtZero: true, max: 100 } }
@@ -177,9 +195,9 @@ function fetchChartData(tipo, maquina_id, chart) {
         chart.data.labels = data.map(d => d.data);
         chart.data.datasets[0].data = valores;
 
-        // Linha vermelha se qualquer ponto do segmento estiver abaixo do mínimo
+        // Linha vermelha SOMENTE se o PONTO FINAL (ctx.p1) do segmento estiver abaixo do mínimo
         chart.data.datasets[0].segment = {
-            borderColor: ctx => (ctx.p0.parsed.y < minPercent || ctx.p1.parsed.y < minPercent) ? corAlerta : corBase
+            borderColor: ctx => ctx.p1.parsed.y < minPercent ? corAlerta : corBase
         };
 
         // Pontos: preenchimento e contorno
@@ -194,8 +212,23 @@ const chartDiario = novoGrafico(document.getElementById('chartDiario'));
 const chartMensal = novoGrafico(document.getElementById('chartMensal'));
 const chartAnual = novoGrafico(document.getElementById('chartAnual'));
 
+// Helper para atualizar a linha horizontal sem precisar recarregar tudo
+function atualizarLinhaLimite(chart, valor) {
+    if (chart && chart.options.plugins.annotation.annotations.linhaLimite) {
+        chart.options.plugins.annotation.annotations.linhaLimite.yMin = valor;
+        chart.options.plugins.annotation.annotations.linhaLimite.yMax = valor;
+        chart.update();
+    }
+}
+
 function atualizarGraficos() {
     const maquina_id = document.getElementById('maquinaSelect').value;
+    
+    // Atualiza a posição da linha nos 3 gráficos antes de buscar dados
+    atualizarLinhaLimite(chartDiario, minPercent);
+    atualizarLinhaLimite(chartMensal, minPercent);
+    atualizarLinhaLimite(chartAnual, minPercent);
+
     fetchChartData('diario', maquina_id, chartDiario);
     fetchChartData('mensal', maquina_id, chartMensal);
     fetchChartData('anual', maquina_id, chartAnual);
@@ -204,8 +237,10 @@ function atualizarGraficos() {
 // Eventos
 document.getElementById('minPercent').addEventListener('input', e => {
     minPercent = parseFloat(e.target.value || 0);
+    // Chama atualizarGraficos para repintar as linhas (segment) E a barra horizontal
     atualizarGraficos();
 });
+
 document.getElementById('maquinaSelect').addEventListener('change', atualizarGraficos);
 </script>
 </body>
