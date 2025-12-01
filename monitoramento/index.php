@@ -82,8 +82,8 @@ body { background-color: #f8f9fa; }
     <div class="d-flex align-items-end gap-2">
         <input id="rangeData" class="form-control" placeholder="Selecione o intervalo">
         <button class="help-circle" type="button" data-bs-toggle="tooltip" data-bs-placement="right"
-            title="Use o scroll do mouse para dar zoom horizontal.
-Clique e arraste para mover o gráfico.
+            title="Use o scroll do mouse para dar zoom e navegar pelo gráfico na horizontal.
+Clique e arraste para mover o gráfico e selecionar partes dele.
 No celular, use pinça para zoom.">?</button>
     </div>
 </div>
