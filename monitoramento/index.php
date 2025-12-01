@@ -103,7 +103,6 @@ No celular, use pinça para zoom.">?</button>
 <div class="tab-content mt-3">
 <div class="tab-pane fade show active" id="diario">
     <div class="card"><div class="card-body">
-        <h5 class="card-title">Atividade Diária (%)</h5>
         <div id="chartDiario" class="chart-container"></div>
     </div></div>
 </div>
@@ -153,8 +152,14 @@ $(function () {
     atualizarGraficos();
 });
 
-function criarHighcharts(containerId) {
-    // Configuração completa da plotLine, AGORA INCLUINDO O ID 'min-limit' (Correção do bug de dupla linha)
+/**
+ * Cria um gráfico Highcharts com configurações padrão e título inicial.
+ * @param {string} containerId ID do elemento DIV.
+ * @param {string} tipoAtividade Nome base do título (ex: 'Atividade Diária').
+ * @returns {Highcharts.Chart} O objeto do gráfico.
+ */
+function criarHighcharts(containerId, tipoAtividade) {
+    // Configuração completa da plotLine, AGORA INCLUINDO O ID 'min-limit'
     const plotLineConfig = {
         id: 'min-limit', 
         value: minPercent, // Valor inicial da linha
@@ -163,29 +168,32 @@ function criarHighcharts(containerId) {
         dashStyle: 'Dash',
         zIndex: 5
     };
+    
+    // Titulo inicial: Atividade (tipo) (%) - Nome da Máquina
+    const maquinaNomeInicial = $('#maquinaSelect option:selected').text();
+    const tituloInicial = `${tipoAtividade} (%) - ${maquinaNomeInicial}`;
 
     return Highcharts.chart(containerId, {
         chart: {
             zoomType: 'x',
             panning: true,
             panKey: 'shift',
-            // Configuração para barra de rolagem horizontal (Highcharts Stock/Module)
             scrollablePlotArea: { 
                 minWidth: 1000,
                 scrollPositionX: 1
             }
         },
-        title: { text: null },
+        title: { text: tituloInicial }, // <--- Título dinâmico
         xAxis: { type: 'category' },
         yAxis: { 
             min: 0, 
             max: 100, 
             title: { text: 'Percentual (%)' },
-            plotLines: [plotLineConfig] // Usa a configuração completa
+            plotLines: [plotLineConfig]
         },
         tooltip: { shared: true, valueSuffix: '%' },
         series: [{
-            name: 'Percentual de atividade',
+            name: 'Percentual de atividade da máquina',
             data: [],
             color: corBase
         }],
@@ -197,13 +205,14 @@ function criarHighcharts(containerId) {
     });
 }
 
-const chartDiario = criarHighcharts('chartDiario');
-const chartMensal = criarHighcharts('chartMensal');
-const chartAnual = criarHighcharts('chartAnual');
+// Passamos o tipo de atividade para montar o título
+const chartDiario = criarHighcharts('chartDiario', 'Atividade Diária');
+const chartMensal = criarHighcharts('chartMensal', 'Atividade Mensal');
+const chartAnual = criarHighcharts('chartAnual', 'Atividade Anual');
+
 
 /**
  * Atualiza o plotLine (linha horizontal) do gráfico.
- * Deve ser chamada sempre que o input minPercent mudar.
  */
 function atualizarPlotLine(chart, novoMinPercent) {
     if (chart.yAxis && chart.yAxis[0]) {
@@ -222,8 +231,19 @@ function atualizarPlotLine(chart, novoMinPercent) {
     }
 }
 
-function fetchChartData(tipo, chart) {
+/**
+ * Faz a chamada AJAX para buscar os dados e atualiza o gráfico e o título.
+ * @param {string} tipo Tipo de consolidação ('diario', 'mensal', 'anual').
+ * @param {Highcharts.Chart} chart Objeto do gráfico a ser atualizado.
+ * @param {string} tituloBase Nome base do título (ex: 'Atividade Diária').
+ */
+function fetchChartData(tipo, chart, tituloBase) {
     const maquina_id = $('#maquinaSelect').val();
+    
+    // 1. Atualiza o título do gráfico antes de carregar os dados
+    const maquinaNome = $('#maquinaSelect option:selected').text();
+    chart.setTitle({ text: `${tituloBase} (%) - ${maquinaNome}` });
+    
     fetch(`api/consolidado.php?tipo=${tipo}&maquina_id=${maquina_id}&inicio=${dateStart}&fim=${dateEnd}`)
     .then(res => res.json())
     .then(data => {
@@ -239,13 +259,17 @@ function fetchChartData(tipo, chart) {
     });
 }
 
+/**
+ * Função principal para atualizar todos os gráficos e limites.
+ */
 function atualizarGraficos() {
     // Atualiza a variável global
     minPercent = parseFloat($('#minPercent').val() || 0); 
 
-    fetchChartData('diario', chartDiario);
-    fetchChartData('mensal', chartMensal);
-    fetchChartData('anual', chartAnual);
+    // Chama a função de busca de dados para cada gráfico, passando o título base
+    fetchChartData('diario', chartDiario, 'Atividade Diária');
+    fetchChartData('mensal', chartMensal, 'Atividade Mensal');
+    fetchChartData('anual', chartAnual, 'Atividade Anual');
 }
 
 // Eventos
