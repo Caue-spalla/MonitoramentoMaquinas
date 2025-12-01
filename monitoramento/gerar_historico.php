@@ -106,17 +106,27 @@ if (isset($_POST["iniciar"])) {
         atualizarStatus("Gerando dia <b>$dataStr</b>");
         enviar("📅 Gerando registros de $dataStr");
 
+        // Inicializa o valor anterior aleatório
+        $vibAnterior = rand(0,1);
+
         for ($i = 0; $i < 300; $i++) {
 
             $id = rand(1,3);
 
-            // Mais chance de vibrando: 70% vibrando, 30% parado
-            $vib = rand(1,10) <= 7 ? 1 : 0;
+            // Mais chance de repetir o valor anterior
+            $manter = 0.75; // 75% chance de manter o mesmo valor
+            if (rand(0,100)/100 <= $manter) {
+                $vib = $vibAnterior;
+            } else {
+                $vib = $vibAnterior ? 0 : 1; // alterna
+            }
 
+            $vibAnterior = $vib; // atualiza para próximo loop
+
+            // Pequenas flutuações de tempo
             $h = rand(0,23);
             $m = rand(0,59);
             $s = rand(0,59);
-
             $dataHora = "$dataStr $h:$m:$s";
 
             $con->query("INSERT INTO leituras (maquina_id, vibrando, data_hora)
@@ -124,7 +134,6 @@ if (isset($_POST["iniciar"])) {
 
             $feitos++;
             $porc = round(($feitos / $totalReg) * 100, 2);
-
             atualizarBarra($porc);
         }
 
